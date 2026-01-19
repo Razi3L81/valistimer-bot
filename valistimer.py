@@ -5,7 +5,7 @@ import time
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TIMER_DURATION = 10 # 22 * 60  # 22 minutes
+TIMER_DURATION = 22 * 60  # 22 minutes
 STATE_FILE = "timer_state.json"
 USERS_FILE = "users.json"
 current_task = None
