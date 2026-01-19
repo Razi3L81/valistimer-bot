@@ -248,7 +248,6 @@ async def on_startup(app: Application):
 
 def main():
     TOKEN = os.getenv("TOKEN")
-    #TOKEN = "8516102459:AAFOoORAS5wsM2Fv-Uf69srh28Lj-VeGHzM"
 
     app = Application.builder().token(TOKEN).post_init(on_startup).build()
 
