@@ -62,17 +62,8 @@ def main_keyboard():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Bienvenue dans ValisTimer !\nChoisis une action :",
+        "ValisTimer est prêt.",
         reply_markup=main_keyboard()
-    )
-
-
-async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Commandes disponibles :\n"
-        "/start – Afficher le menu\n"
-        "/status – Voir le temps restant\n"
-        "/reset – Réinitialiser le timer"
     )
 
 
@@ -104,24 +95,36 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    chat_id = query.message.chat_id
     data = query.data
+
+    # Charger l'état actuel
+    state = load_state()
+    now = time.time()
 
     # --------------------------
     # 1. Démarrer le timer
     # --------------------------
     if data == "start_timer":
-        duration = 20 * 60  # 20 minutes
-        end_time = time.time() + duration
 
-        state = {
-            "timer_end": end_time,
-            "message_id": query.message.message_id,
-            "chat_id": query.message.chat_id
-        }
-        save_state(state)
+        # Empêcher les doublons
+        if state and state.get("timer_end", 0) > now:
+            remaining = state["timer_end"] - now
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"⏳ Un timer est déjà en cours : {format_time(remaining)}"
+            )
+            return
 
-        await query.message.reply_text(
-            f"🧳 Valise ouverte !\n⏳ Temps restant : {format_time(duration)}",
+        # Démarrer un nouveau timer
+        duration = 20 * 60
+        end_time = now + duration
+
+        save_state({"timer_end": end_time})
+
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"🧳 Valise ouverte !\n⏳ Temps restant : {format_time(duration)}",
             reply_markup=main_keyboard()
         )
         return
@@ -130,20 +133,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 2. Status
     # --------------------------
     if data == "status":
-        state = load_state()
-
         if not state:
-            await query.message.reply_text("Aucun timer en cours.")
+            await context.bot.send_message(chat_id=chat_id, text="Aucun timer en cours.")
             return
 
-        remaining = state["timer_end"] - time.time()
+        remaining = state["timer_end"] - now
 
         if remaining <= 0:
-            await query.message.reply_text("🧳 La valise est disponible !")
+            await context.bot.send_message(chat_id=chat_id, text="🧳 La valise est disponible !")
             return
 
-        await query.message.reply_text(
-            f"⏳ Temps restant : {format_time(remaining)}"
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"⏳ Temps restant : {format_time(remaining)}"
         )
         return
 
@@ -152,7 +154,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --------------------------
     if data == "reset_timer":
         clear_state()
-        await query.message.reply_text("🔄 Timer réinitialisé.")
+        await context.bot.send_message(chat_id=chat_id, text="🔄 Timer réinitialisé.")
         return
 
 
@@ -165,7 +167,6 @@ def main():
 
     # Commandes
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("status", status_cmd))
     app.add_handler(CommandHandler("reset", reset_cmd))
 
